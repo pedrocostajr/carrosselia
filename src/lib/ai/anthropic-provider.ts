@@ -5,6 +5,7 @@ import type {
   AIProvider,
   GenerationContext,
   SlideImprovementContext,
+  ScoreableSlide,
 } from "@/lib/ai/provider";
 import {
   structurePreviewSchema,
@@ -17,7 +18,6 @@ import {
   type SlideImprovementResult,
   type EditorialScore,
 } from "@/lib/schemas/ai";
-import type { Slide } from "@/lib/schemas/slide";
 import {
   SYSTEM_PROMPT,
   buildStructurePreviewPrompt,
@@ -118,13 +118,7 @@ export class AnthropicProvider implements AIProvider {
     return this.completeAndValidate(buildSplitSlidePrompt(ctx), splitSlideResultSchema);
   }
 
-  async scoreCarousel(
-    slides: Pick<Slide, "headline" | "body" | "type">[],
-    ctx: Pick<GenerationContext, "strategy">
-  ): Promise<EditorialScore> {
-    return this.completeAndValidate(
-      buildScorePrompt(slides, ctx.strategy.audience),
-      editorialScoreSchema
-    );
+  async scoreCarousel(slides: ScoreableSlide[], audience: string): Promise<EditorialScore> {
+    return this.completeAndValidate(buildScorePrompt(slides, audience), editorialScoreSchema);
   }
 }

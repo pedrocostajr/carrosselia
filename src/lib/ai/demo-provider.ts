@@ -2,6 +2,7 @@ import type {
   AIProvider,
   GenerationContext,
   SlideImprovementContext,
+  ScoreableSlide,
 } from "@/lib/ai/provider";
 import type {
   StructurePreview,
@@ -10,7 +11,6 @@ import type {
   EditorialScore,
   Framework,
 } from "@/lib/schemas/ai";
-import type { Slide } from "@/lib/schemas/slide";
 
 const EDITORIAL_CRITERIA_LABELS = [
   "Clareza do gancho",
@@ -262,10 +262,10 @@ export class DemoProvider implements AIProvider {
   }
 
   async scoreCarousel(
-    slides: Pick<Slide, "headline" | "body" | "type">[],
-    ctx: Pick<GenerationContext, "strategy">
+    slides: ScoreableSlide[],
+    audience: string
   ): Promise<EditorialScore> {
-    const seed = hashString(slides.map((s) => s.headline).join("|") + ctx.strategy.audience);
+    const seed = hashString(slides.map((s) => s.headline).join("|") + audience);
     const criteria = EDITORIAL_CRITERIA_LABELS.map((label, idx) => ({
       label,
       score: 60 + ((seed >> idx) % 30),

@@ -19,6 +19,12 @@ export interface SlideImprovementContext {
   tone: string;
 }
 
+export interface ScoreableSlide {
+  headline?: string;
+  body?: string;
+  type: string;
+}
+
 /**
  * Abstraction over any generative-AI backend used by the app. Nothing in
  * the application talks to a vendor SDK directly outside of an
@@ -39,8 +45,5 @@ export interface AIProvider {
     slides: { headline: string; body: string }[];
   }>;
 
-  scoreCarousel(
-    slides: Pick<Slide, "headline" | "body" | "type">[],
-    ctx: Pick<GenerationContext, "strategy">
-  ): Promise<EditorialScore>;
+  scoreCarousel(slides: ScoreableSlide[], audience: string): Promise<EditorialScore>;
 }
