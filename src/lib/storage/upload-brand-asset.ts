@@ -38,6 +38,25 @@ export async function uploadBrandAsset(
   userId: string,
   brandKitId: string
 ): Promise<UploadedAsset> {
+  return uploadAsset(file, kind, userId, `brand/${brandKitId}`, { brandKitId });
+}
+
+/** Uploads an image used directly on a canvas slide (not tied to a brand kit). */
+export async function uploadCanvasImage(
+  file: File,
+  userId: string,
+  projectId: string
+): Promise<UploadedAsset> {
+  return uploadAsset(file, "upload", userId, `projects/${projectId}`, { projectId });
+}
+
+async function uploadAsset(
+  file: File,
+  kind: "logo" | "logo_alt" | "avatar" | "upload",
+  userId: string,
+  pathPrefix: string,
+  links: { brandKitId?: string; projectId?: string }
+): Promise<UploadedAsset> {
   const ext = ALLOWED_MIME_TO_EXT[file.type];
   if (!ext) {
     throw new UploadValidationError(
@@ -49,7 +68,7 @@ export async function uploadBrandAsset(
   }
 
   const supabase = createClient();
-  const path = `${userId}/brand/${brandKitId}/${kind}-${nanoid()}.${ext}`;
+  const path = `${userId}/${pathPrefix}/${kind}-${nanoid()}.${ext}`;
 
   const { error } = await supabase.storage.from("brand-assets").upload(path, file, {
     contentType: file.type,
@@ -64,7 +83,8 @@ export async function uploadBrandAsset(
 
   await supabase.from("assets").insert({
     user_id: userId,
-    brand_kit_id: brandKitId,
+    brand_kit_id: links.brandKitId ?? null,
+    project_id: links.projectId ?? null,
     kind,
     storage_path: path,
     mime_type: file.type,
