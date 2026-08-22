@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 import { signInSchema, type SignInInput } from "@/lib/schemas/auth";
+import { safeRedirectPath } from "@/lib/security/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,7 @@ export function SignInForm() {
     }
 
     toast.success("Bem-vindo de volta!");
-    router.push(searchParams.get("next") || "/dashboard");
+    router.push(safeRedirectPath(searchParams.get("next")));
     router.refresh();
   }
 
