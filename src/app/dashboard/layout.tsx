@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { LayoutGrid, Palette, Plus, Sparkles } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { DemoModeBanner } from "@/components/demo-mode-banner";
+import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
 import { isDemoMode } from "@/lib/ai";
 
 const NAV_ITEMS = [
@@ -14,6 +16,10 @@ const NAV_ITEMS = [
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  if (!isSupabaseConfigured()) {
+    return <MissingSupabaseConfig />;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
