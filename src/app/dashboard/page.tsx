@@ -4,10 +4,12 @@ import { LayoutGrid, Plus } from "lucide-react";
 
 import { listProjects, type ProjectRow } from "@/lib/data/projects";
 import { listBrandKits } from "@/lib/data/brand-kits";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { ProjectsToolbar } from "@/components/dashboard/projects-toolbar";
 import { ProjectCard } from "@/components/dashboard/project-card";
 import { DashboardPagination } from "@/components/dashboard/pagination";
 import { EmptyState } from "@/components/empty-state";
+import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
 import { Button } from "@/components/ui/button";
 
 interface DashboardPageProps {
@@ -15,6 +17,10 @@ interface DashboardPageProps {
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  if (!isSupabaseConfigured()) {
+    return <MissingSupabaseConfig />;
+  }
+
   const params = await searchParams;
   const page = Number(params.page) || 1;
 

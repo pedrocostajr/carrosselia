@@ -2,11 +2,17 @@ import Link from "next/link";
 import { Palette, Plus } from "lucide-react";
 
 import { listBrandKits } from "@/lib/data/brand-kits";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { BrandKitCard } from "@/components/brand/brand-kit-card";
 import { EmptyState } from "@/components/empty-state";
+import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
 import { Button } from "@/components/ui/button";
 
 export default async function BrandKitsPage() {
+  if (!isSupabaseConfigured()) {
+    return <MissingSupabaseConfig />;
+  }
+
   const kits = await listBrandKits();
 
   return (

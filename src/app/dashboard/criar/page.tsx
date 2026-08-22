@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listBrandKits } from "@/lib/data/brand-kits";
 import { CreationWizard } from "@/components/wizard/creation-wizard";
+import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
 
 export default async function CreateProjectPage() {
+  if (!isSupabaseConfigured()) {
+    return <MissingSupabaseConfig />;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
