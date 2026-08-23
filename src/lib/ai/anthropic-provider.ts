@@ -28,7 +28,8 @@ import {
 } from "@/lib/ai/prompts";
 import { parseAndValidate, AiResponseValidationError } from "@/lib/ai/json-repair";
 
-const MAX_REPAIR_ATTEMPTS = 1;
+const MAX_REPAIR_ATTEMPTS = 2;
+const MAX_TOKENS = 8192;
 
 export class AiGenerationError extends Error {
   constructor(message: string, public readonly userMessage: string) {
@@ -52,7 +53,7 @@ export class AnthropicProvider implements AIProvider {
   private async complete(userPrompt: string): Promise<string> {
     const response = await this.client.messages.create({
       model: this.model,
-      max_tokens: 4096,
+      max_tokens: MAX_TOKENS,
       system: SYSTEM_PROMPT,
       messages: [
         { role: "user", content: userPrompt },
@@ -72,6 +73,15 @@ export class AnthropicProvider implements AIProvider {
         "A IA não retornou uma resposta válida. Tente novamente."
       );
     }
+
+    if (response.stop_reason === "max_tokens") {
+      // The JSON was cut off mid-stream - never worth trying to parse.
+      throw new AiResponseValidationError(
+        "A resposta da IA foi cortada por exceder o limite de tamanho.",
+        { stopReason: response.stop_reason }
+      );
+    }
+
     return `{${textBlock.text}`;
   }
 
@@ -89,15 +99,33 @@ export class AnthropicProvider implements AIProvider {
       } catch (err) {
         lastError = err;
         if (err instanceof AiResponseValidationError && attempt < MAX_REPAIR_ATTEMPTS) {
-          currentPrompt = `${prompt}\n\nSua resposta anterior não seguiu o formato JSON exigido (${err.message}). Responda novamente APENAS com o JSON válido, corrigindo o problema.`;
+          const wasTruncated =
+            typeof err.issues === "object" &&
+            err.issues !== null &&
+            (err.issues as { stopReason?: string }).stopReason === "max_tokens";
+
+          const guidance = wasTruncated
+            ? "Sua resposta anterior foi cortada por ficar longa demais antes de terminar o JSON. Responda de novo bem mais concisa - frases mais curtas em cada campo de texto - mas SEM remover nenhum campo obrigatório, até caber inteira."
+            : `Sua resposta anterior não seguiu o formato exigido. Detalhes do erro: ${JSON.stringify(
+                err.issues
+              ).slice(0, 1500)}. Responda novamente APENAS com o JSON válido, corrigindo exatamente esse problema.`;
+
+          currentPrompt = `${prompt}\n\n${guidance}`;
           continue;
         }
         break;
       }
     }
 
+    const technicalDetail =
+      lastError instanceof AiResponseValidationError
+        ? `${lastError.message} ${JSON.stringify(lastError.issues)}`
+        : lastError instanceof Error
+          ? lastError.message
+          : "unknown";
+
     throw new AiGenerationError(
-      lastError instanceof Error ? lastError.message : "unknown",
+      technicalDetail,
       "A IA retornou uma resposta em um formato inesperado. Tente gerar novamente."
     );
   }
