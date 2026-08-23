@@ -19,6 +19,22 @@ describe("extractJson", () => {
     const text = 'Sure! {"a": {"b": 1}} - hope that helps';
     expect(JSON.parse(extractJson(text))).toEqual({ a: { b: 1 } });
   });
+
+  it("does not miscount braces that appear inside string values", () => {
+    const text = '{"reason": "use { } com cuidado", "ok": true}';
+    expect(JSON.parse(extractJson(text))).toEqual({
+      reason: "use { } com cuidado",
+      ok: true,
+    });
+  });
+
+  it("handles escaped quotes inside strings without breaking depth tracking", () => {
+    const text = '{"quote": "ela disse \\"oi {mundo}\\"", "n": 2}';
+    expect(JSON.parse(extractJson(text))).toEqual({
+      quote: 'ela disse "oi {mundo}"',
+      n: 2,
+    });
+  });
 });
 
 describe("parseAndValidate", () => {

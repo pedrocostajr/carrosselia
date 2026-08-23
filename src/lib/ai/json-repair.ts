@@ -12,9 +12,27 @@ export function extractJson(text: string): string {
   const openChar = candidate[firstBrace];
   const closeChar = openChar === "{" ? "}" : "]";
   let depth = 0;
+  let inString = false;
+  let escaped = false;
   for (let i = firstBrace; i < candidate.length; i++) {
-    if (candidate[i] === openChar) depth++;
-    else if (candidate[i] === closeChar) {
+    const ch = candidate[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === openChar) {
+      depth++;
+    } else if (ch === closeChar) {
       depth--;
       if (depth === 0) return candidate.slice(firstBrace, i + 1);
     }

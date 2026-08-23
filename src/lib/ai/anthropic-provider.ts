@@ -54,7 +54,15 @@ export class AnthropicProvider implements AIProvider {
       model: this.model,
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
+      messages: [
+        { role: "user", content: userPrompt },
+        // Prefilling the assistant turn with "{" strongly biases the model
+        // toward emitting raw JSON as its very first character, instead of
+        // a markdown fence or a prose preamble - the response continues
+        // from this prefix, so it is not repeated in textBlock.text and
+        // must be re-added before parsing.
+        { role: "assistant", content: "{" },
+      ],
     });
 
     const textBlock = response.content.find((block) => block.type === "text");
@@ -64,7 +72,7 @@ export class AnthropicProvider implements AIProvider {
         "A IA não retornou uma resposta válida. Tente novamente."
       );
     }
-    return textBlock.text;
+    return `{${textBlock.text}`;
   }
 
   private async completeAndValidate<T>(
