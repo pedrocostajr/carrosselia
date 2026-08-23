@@ -37,6 +37,7 @@ export interface WizardState {
   brandKitId: string | null;
   templateId: string;
   format: SlideFormat;
+  generateBackgroundImages: boolean;
 }
 
 export const INITIAL_WIZARD_STATE: WizardState = {
@@ -67,4 +68,5 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   brandKitId: null,
   templateId: "minimal",
   format: "1080x1350",
+  generateBackgroundImages: false,
 };

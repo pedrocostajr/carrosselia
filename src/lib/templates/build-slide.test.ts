@@ -16,7 +16,7 @@ const aiSlide: AiSlide = {
 };
 
 describe("buildSlideFromAi", () => {
-  for (const templateId of ["minimal", "editorial", "social-post"]) {
+  for (const templateId of ["minimal", "editorial", "social-post", "photo-overlay"]) {
     it(`produces a schema-valid slide for the "${templateId}" template`, () => {
       const slide = buildSlideFromAi(aiSlide, {
         id: "slide-1",

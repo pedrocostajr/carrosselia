@@ -17,6 +17,14 @@ import { AiGenerationError } from "@/lib/ai/anthropic-provider";
 import { logAiGeneration } from "@/lib/ai/log-generation";
 import { buildSlideFromAi } from "@/lib/templates/build-slide";
 import { brandKitToContext } from "@/lib/templates/brand-context";
+import { getImageProvider } from "@/lib/ai/image";
+import { buildImagePrompt } from "@/lib/ai/image/prompt";
+import { uploadGeneratedImage } from "@/lib/storage/upload-generated-image";
+import type { Slide } from "@/lib/schemas/slide";
+
+// Generating a background image per slide (Gemini) can take longer than the
+// default serverless timeout when several slides are requested.
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const auth = await requireUser();
@@ -104,27 +112,62 @@ export async function POST(request: Request) {
 
     const brandContext = brandKitToContext(brandKit);
     const slideCount = result.carousel.slides.length;
-    const slideRows = result.carousel.slides.map((aiSlide, index) => {
-      const slide = buildSlideFromAi(aiSlide, {
+    const slides: Slide[] = result.carousel.slides.map((aiSlide, index) =>
+      buildSlideFromAi(aiSlide, {
         id: crypto.randomUUID(),
         templateId: input.templateId,
         format: input.format,
         brand: brandContext,
         isFirst: index === 0,
         isLast: index === slideCount - 1,
-      });
+      })
+    );
 
-      return {
-        id: slide.id,
-        user_id: user.id,
-        carousel_id: carousel.id,
-        order_index: slide.order,
-        type: slide.type,
-        template: slide.template,
-        format: slide.format,
-        slide_data: slide,
-      };
-    });
+    const imageProvider = getImageProvider();
+    if (input.generateBackgroundImages && input.templateId === "photo-overlay" && imageProvider) {
+      const aspectRatio = input.format === "1080x1080" ? "square" : "portrait";
+      await Promise.all(
+        slides.map(async (slide, index) => {
+          try {
+            const aiSlide = result.carousel.slides[index];
+            const prompt = buildImagePrompt({
+              headline: aiSlide.headline,
+              visualSuggestion: aiSlide.visualSuggestion,
+              niche: input.strategy.niche,
+              visualStyle: brandKit?.visual_style ?? "minimalista",
+            });
+            const image = await imageProvider.generateImage(prompt, aspectRatio);
+            const imageSrc = await uploadGeneratedImage(supabase, {
+              userId: user.id,
+              projectId: project.id,
+              slideId: slide.id,
+              bytes: image.bytes,
+              mimeType: image.mimeType,
+            });
+            slide.background = {
+              ...slide.background,
+              type: "image",
+              imageSrc,
+            };
+          } catch (err) {
+            // A single failed image should not fail the whole generation -
+            // that slide simply keeps its solid dark fallback background.
+            logServerError("api/ai/generate:image", err);
+          }
+        })
+      );
+    }
+
+    const slideRows = slides.map((slide) => ({
+      id: slide.id,
+      user_id: user.id,
+      carousel_id: carousel.id,
+      order_index: slide.order,
+      type: slide.type,
+      template: slide.template,
+      format: slide.format,
+      slide_data: slide,
+    }));
 
     const { error: slidesError } = await supabase.from("slides").insert(slideRows);
     if (slidesError) throw slidesError;

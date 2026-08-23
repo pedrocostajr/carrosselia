@@ -22,6 +22,7 @@ export const generateRequestSchema = generationContextRequestSchema.extend({
   format: slideFormatSchema,
   projectTitle: z.string().max(200).optional(),
   contentSourceType: z.enum(["url", "text", "topic"]),
+  generateBackgroundImages: z.boolean().optional(),
 });
 
 export const slideImproveRequestSchema = z.object({

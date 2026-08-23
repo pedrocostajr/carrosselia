@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listBrandKits } from "@/lib/data/brand-kits";
+import { isImageGenConfigured } from "@/lib/ai/image";
 import { CreationWizard } from "@/components/wizard/creation-wizard";
 import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
 
@@ -27,7 +28,7 @@ export default async function CreateProjectPage() {
           Em poucos passos, a IA transforma seu conteúdo em um carrossel pronto para editar.
         </p>
       </div>
-      <CreationWizard brandKits={brandKits} />
+      <CreationWizard brandKits={brandKits} imageGenAvailable={isImageGenConfigured()} />
     </div>
   );
 }

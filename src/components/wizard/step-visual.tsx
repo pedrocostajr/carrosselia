@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 import type { WizardState } from "@/components/wizard/wizard-types";
 import type { BrandKitRow } from "@/lib/data/brand-kits";
@@ -18,12 +18,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface Props {
   state: WizardState;
   brandKits: BrandKitRow[];
-  onChange: (patch: Partial<Pick<WizardState, "brandKitId" | "templateId" | "format">>) => void;
+  imageGenAvailable: boolean;
+  onChange: (
+    patch: Partial<
+      Pick<WizardState, "brandKitId" | "templateId" | "format" | "generateBackgroundImages">
+    >
+  ) => void;
   onBack: () => void;
 }
 
@@ -47,6 +53,17 @@ function TemplateThumbnail({ templateId }: { templateId: string }) {
     );
   }
 
+  if (templateId === "photo-overlay") {
+    return (
+      <div className="relative flex aspect-[4/5] w-full flex-col justify-end gap-1.5 overflow-hidden rounded-md border bg-gradient-to-br from-neutral-500 to-neutral-800 p-3">
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative h-2.5 w-3/4 rounded bg-white/90" />
+        <div className="relative h-1.5 w-full rounded bg-white/70" />
+        <div className="relative h-1.5 w-1/2 rounded bg-white/70" />
+      </div>
+    );
+  }
+
   if (templateId === "editorial") {
     return (
       <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 rounded-md border bg-white p-3 dark:bg-neutral-900">
@@ -66,7 +83,7 @@ function TemplateThumbnail({ templateId }: { templateId: string }) {
   );
 }
 
-export function StepVisual({ state, brandKits, onChange, onBack }: Props) {
+export function StepVisual({ state, brandKits, imageGenAvailable, onChange, onBack }: Props) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressLabel, setProgressLabel] = useState("");
@@ -89,9 +106,17 @@ export function StepVisual({ state, brandKits, onChange, onBack }: Props) {
           templateId: state.templateId,
           format: state.format,
           contentSourceType: state.origin.type,
+          generateBackgroundImages:
+            state.templateId === "photo-overlay" && imageGenAvailable
+              ? state.generateBackgroundImages
+              : false,
         }),
       });
-      setProgressLabel("Aplicando a identidade visual...");
+      setProgressLabel(
+        state.templateId === "photo-overlay" && state.generateBackgroundImages
+          ? "Gerando imagens de fundo com IA (isso pode levar um pouco mais)..."
+          : "Aplicando a identidade visual..."
+      );
       const json = await res.json();
       if (!res.ok) {
         toast.error("Não foi possível gerar o carrossel.", { description: json?.error?.message });
@@ -133,7 +158,7 @@ export function StepVisual({ state, brandKits, onChange, onBack }: Props) {
 
       <div className="space-y-2">
         <Label>Modelo visual</Label>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {TEMPLATES.map((tpl) => (
             <button
               key={tpl.id}
@@ -150,6 +175,27 @@ export function StepVisual({ state, brandKits, onChange, onBack }: Props) {
             </button>
           ))}
         </div>
+
+        {state.templateId === "photo-overlay" && (
+          <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3">
+            <Checkbox
+              id="generate-images"
+              checked={state.generateBackgroundImages}
+              disabled={!imageGenAvailable}
+              onCheckedChange={(v) => onChange({ generateBackgroundImages: Boolean(v) })}
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="generate-images" className="flex items-center gap-1.5 font-normal">
+                <Sparkles className="size-3.5" /> Gerar imagens de fundo com IA (Google)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {imageGenAvailable
+                  ? "Cria uma imagem de fundo original para cada slide, com base no conteúdo gerado."
+                  : "Indisponível: configure GEMINI_API_KEY para ativar esta opção. Sem ela, o template usa um fundo escuro sólido."}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -86,6 +86,21 @@ ANTHROPIC_MODEL=claude-sonnet-4-5
 - A chave de IA só é lida em `src/lib/ai/anthropic-provider.ts`, no servidor. Nenhuma rota client
   side tem acesso a ela.
 
+## Configurando geração de imagem (Google Gemini, opcional)
+
+```
+GEMINI_API_KEY=...
+GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
+```
+
+- Usada apenas pelo template **"Fotográfico com sobreposição"** para gerar uma imagem de fundo
+  original por slide (com prompt construído a partir do gancho, sugestão visual e nicho, sempre
+  instruindo a IA a não desenhar texto na imagem — o texto é sempre desenhado pela aplicação por
+  cima). Sem essa chave, o template continua funcionando normalmente com um fundo escuro sólido; a
+  opção "Gerar imagens de fundo com IA" simplesmente fica desabilitada no wizard.
+- Crie a chave em [aistudio.google.com](https://aistudio.google.com/apikey).
+- Assim como a chave da Anthropic, é lida apenas no servidor (`src/lib/ai/image/google-image-provider.ts`).
+
 ## Executando localmente
 
 ```bash
@@ -153,9 +168,12 @@ O projeto está pronto para deploy (não foi implantado automaticamente por esta
   sanitização de HTML e extração via Readability
 - Camada `AIProvider` com `AnthropicProvider` e `DemoProvider`; todas as respostas de IA são
   validadas com Zod, com uma tentativa de reparo controlada antes de reportar erro ao usuário
-- Três templates de slide (minimalista, editorial, post social inspirado em rede social — sem
-  métricas falsas e sem copiar a interface de nenhuma plataforma), com identidade de marca aplicada
-  automaticamente
+- Quatro templates de slide (minimalista, editorial, post social inspirado em rede social — sem
+  métricas falsas e sem copiar a interface de nenhuma plataforma —, e fotográfico com sobreposição),
+  com identidade de marca aplicada automaticamente
+- Geração opcional de imagem de fundo por IA (Google Gemini) para o template fotográfico, com
+  upload automático para o Storage e fallback gracioso (fundo escuro sólido) quando a chave não
+  está configurada
 - Editor visual completo (Konva + Zustand): selecionar/mover/redimensionar/rotacionar elementos,
   edição de texto inline, adicionar texto/forma/imagem/foto de perfil/logotipo, substituir imagem,
   camadas (ordem, bloqueio, visibilidade), guia de margem segura, desfazer/refazer, copiar/colar,
@@ -179,6 +197,12 @@ O projeto está pronto para deploy (não foi implantado automaticamente por esta
 
 ## Limitações conhecidas
 
+- **Geração de imagem (Gemini) não testada em produção real por esta sessão**: o ambiente de
+  desenvolvimento usado para construir a aplicação bloqueia acesso de rede direto a
+  `generativelanguage.googleapis.com`, então o `GoogleImageProvider` foi implementado seguindo o
+  formato documentado da API, mas não pôde ser exercitado ponta a ponta aqui. Teste após configurar
+  `GEMINI_API_KEY`; se o nome do modelo (`GEMINI_IMAGE_MODEL`) mudar de nome no futuro, ajuste a
+  variável de ambiente sem precisar mexer no código.
 - **Rate limiting em memória**: `src/lib/security/rate-limit.ts` é por processo — adequado para uma
   instância única ou demonstração; em produção com múltiplas instâncias, substitua por um backend
   compartilhado (ex. Upstash Redis) — a interface já foi desenhada para essa troca ser um arquivo só.

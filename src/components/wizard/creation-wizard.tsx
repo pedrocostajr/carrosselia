@@ -11,7 +11,13 @@ import { StepStructure } from "@/components/wizard/step-structure";
 import { StepVisual } from "@/components/wizard/step-visual";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function CreationWizard({ brandKits }: { brandKits: BrandKitRow[] }) {
+export function CreationWizard({
+  brandKits,
+  imageGenAvailable,
+}: {
+  brandKits: BrandKitRow[];
+  imageGenAvailable: boolean;
+}) {
   const [state, setState] = useState<WizardState>(INITIAL_WIZARD_STATE);
 
   function patch(partial: Partial<WizardState>) {
@@ -54,6 +60,7 @@ export function CreationWizard({ brandKits }: { brandKits: BrandKitRow[] }) {
             <StepVisual
               state={state}
               brandKits={brandKits}
+              imageGenAvailable={imageGenAvailable}
               onChange={(p) => patch(p)}
               onBack={() => patch({ step: 3 })}
             />
