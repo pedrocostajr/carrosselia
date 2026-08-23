@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutGrid, Palette, Plus, Sparkles } from "lucide-react";
+import { LayoutGrid, Palette, Plus, ShieldCheck, Sparkles } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isAdminEmail } from "@/lib/admin/config";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { DemoModeBanner } from "@/components/demo-mode-banner";
 import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
+import { ApprovalGate } from "@/components/admin/approval-gate";
 import { isDemoMode } from "@/lib/ai";
 
 const NAV_ITEMS = [
@@ -29,6 +31,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/entrar");
   }
 
+  const isAdmin = isAdminEmail(user.email);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("approval_status")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const approvalStatus = profile?.approval_status ?? (isAdmin ? "approved" : "pending");
+  if (approvalStatus === "pending" || approvalStatus === "rejected") {
+    return <ApprovalGate status={approvalStatus} />;
+  }
+
+  const navItems = isAdmin
+    ? [...NAV_ITEMS, { href: "/dashboard/admin", label: "Administração", icon: ShieldCheck }]
+    : NAV_ITEMS;
+
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 border-r bg-muted/20 md:flex md:flex-col">
@@ -37,7 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           Carousel AI
         </div>
         <nav className="flex flex-col gap-1 px-3">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}

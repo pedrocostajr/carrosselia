@@ -156,6 +156,11 @@ O projeto está pronto para deploy (não foi implantado automaticamente por esta
 ## O que foi implementado
 
 - Autenticação (cadastro/login por e-mail e senha) e dashboard protegido por sessão de servidor
+- Aprovação de cadastro: todo novo usuário entra como "pendente" e só acessa o dashboard/editor
+  depois que o administrador aprova. `pedroadair96@gmail.com` é o administrador geral fixo do
+  sistema (auto-aprovado), com um painel em **Administração** para ver todos os usuários, contagem
+  de projetos, aprovar, rejeitar ou excluir permanentemente uma conta (exclusão real via API
+  administrativa do Supabase, cascateando todos os dados daquele usuário)
 - CRUD completo de kits de marca (cores, fontes, logotipo, foto, estilo de botão, arredondamento,
   rodapé, CTA padrão, site/arroba), 7 presets visuais, upload de assets e "aplicar em todos os
   slides" (recolore/refonte os slides já publicados com aquele kit)
@@ -197,6 +202,17 @@ O projeto está pronto para deploy (não foi implantado automaticamente por esta
 
 ## Limitações conhecidas
 
+- **E-mail do admin fixo no código**: `pedroadair96@gmail.com` está hardcoded em três lugares que
+  precisam ficar em sincronia — o trigger `handle_new_user` e as políticas de RLS em
+  `supabase/migrations/0010_admin_approval.sql`, e a constante `ADMIN_EMAIL` em
+  `src/lib/admin/config.ts`. Trocar de admin hoje exige editar os três (uma versão futura poderia
+  trocar isso por uma tabela de admins).
+- **Aprovação é reforçada nas páginas e nas rotas de IA, não em todas as server actions**: um
+  usuário pendente não consegue abrir o dashboard/editor nem chamar as rotas `/api/ai/*` e
+  `/api/extract`, mas ações de servidor mais específicas (ex. salvar um kit de marca) ainda checam
+  apenas que o dado pertence ao próprio usuário (RLS), não o status de aprovação. Como essas ações
+  só são alcançáveis a partir de páginas já bloqueadas para pendentes, o impacto prático é baixo,
+  mas não é um bloqueio em profundidade completo.
 - **Geração de imagem (Gemini) não testada em produção real por esta sessão**: o ambiente de
   desenvolvimento usado para construir a aplicação bloqueia acesso de rede direto a
   `generativelanguage.googleapis.com`, então o `GoogleImageProvider` foi implementado seguindo o
