@@ -8,6 +8,7 @@ import { splitSlideRequestSchema } from "@/lib/schemas/api-requests";
 import { getAIProvider } from "@/lib/ai";
 import { AiGenerationError } from "@/lib/ai/anthropic-provider";
 import { logAiGeneration } from "@/lib/ai/log-generation";
+import { getUserAnthropicKey } from "@/lib/data/user-api-key";
 
 export async function POST(request: Request) {
   const auth = await requireUser();
@@ -25,7 +26,8 @@ export async function POST(request: Request) {
 
   try {
     const input = splitSlideRequestSchema.parse(body);
-    const provider = getAIProvider();
+    const userApiKey = await getUserAnthropicKey(auth.supabase, auth.user.id);
+    const provider = getAIProvider(userApiKey);
 
     const result = await provider.splitSlide({ slide: input.slide, tone: input.tone });
 

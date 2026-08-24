@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutGrid, Palette, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { LayoutGrid, Palette, Plus, Settings, ShieldCheck, Sparkles } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -11,10 +11,12 @@ import { DemoModeBanner } from "@/components/demo-mode-banner";
 import { MissingSupabaseConfig } from "@/components/missing-supabase-config";
 import { ApprovalGate } from "@/components/admin/approval-gate";
 import { isDemoMode } from "@/lib/ai";
+import { getUserAnthropicKey } from "@/lib/data/user-api-key";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Meus projetos", icon: LayoutGrid },
   { href: "/dashboard/marca", label: "Minha marca", icon: Palette },
+  { href: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -46,6 +48,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const navItems = isAdmin
     ? [...NAV_ITEMS, { href: "/dashboard/admin", label: "Administração", icon: ShieldCheck }]
     : NAV_ITEMS;
+
+  // The system-wide demo banner is misleading for a user who brought their
+  // own Anthropic key (their generations are real even though the shared
+  // system key is unset) - only show it when neither is available.
+  const hasOwnKey = !!(await getUserAnthropicKey(supabase, user.id));
 
   return (
     <div className="flex min-h-screen">
@@ -85,7 +92,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="hidden md:block" />
           <UserMenu email={user.email ?? ""} />
         </header>
-        {isDemoMode() && <DemoModeBanner />}
+        {isDemoMode() && !hasOwnKey && <DemoModeBanner />}
         <main className="flex-1 px-4 py-8 md:px-8">{children}</main>
       </div>
     </div>

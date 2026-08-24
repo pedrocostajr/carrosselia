@@ -20,6 +20,7 @@ import { brandKitToContext } from "@/lib/templates/brand-context";
 import { getImageProvider } from "@/lib/ai/image";
 import { buildImagePrompt } from "@/lib/ai/image/prompt";
 import { uploadGeneratedImage } from "@/lib/storage/upload-generated-image";
+import { getUserAnthropicKey } from "@/lib/data/user-api-key";
 import type { Slide } from "@/lib/schemas/slide";
 
 // Generating a background image per slide (Gemini) can take longer than the
@@ -56,7 +57,8 @@ export async function POST(request: Request) {
       brandKit = data;
     }
 
-    const provider = getAIProvider();
+    const userApiKey = await getUserAnthropicKey(supabase, user.id);
+    const provider = getAIProvider(userApiKey);
     const result = await provider.generateCarousel({
       sourceText: input.sourceText,
       sourceTitle: input.sourceTitle,

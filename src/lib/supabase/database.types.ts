@@ -233,6 +233,19 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["ai_generations"]["Row"]>;
         Relationships: [];
       };
+      user_api_keys: {
+        Row: {
+          user_id: string;
+          anthropic_api_key: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["user_api_keys"]["Row"]> & {
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_api_keys"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
