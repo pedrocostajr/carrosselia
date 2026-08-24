@@ -51,20 +51,39 @@ export class AnthropicProvider implements AIProvider {
   }
 
   private async complete(userPrompt: string): Promise<string> {
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: userPrompt },
-        // Prefilling the assistant turn with "{" strongly biases the model
-        // toward emitting raw JSON as its very first character, instead of
-        // a markdown fence or a prose preamble - the response continues
-        // from this prefix, so it is not repeated in textBlock.text and
-        // must be re-added before parsing.
-        { role: "assistant", content: "{" },
-      ],
-    });
+    let response: Anthropic.Messages.Message;
+    try {
+      response = await this.client.messages.create({
+        model: this.model,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        messages: [
+          { role: "user", content: userPrompt },
+          // Prefilling the assistant turn with "{" strongly biases the model
+          // toward emitting raw JSON as its very first character, instead of
+          // a markdown fence or a prose preamble - the response continues
+          // from this prefix, so it is not repeated in textBlock.text and
+          // must be re-added before parsing.
+          { role: "assistant", content: "{" },
+        ],
+      });
+    } catch (err) {
+      // Surface real API failures (invalid key, no credits, rate limit,
+      // outage) as their own clear error instead of letting them fall
+      // through to the generic "unexpected format" message below - those
+      // are a completely different problem and retrying the JSON-repair
+      // loop can never fix them.
+      if (err instanceof Anthropic.APIError) {
+        throw new AiGenerationError(
+          `anthropic_api_error_${err.status}: ${err.message}`,
+          `A IA da Anthropic retornou um erro: ${err.message}`
+        );
+      }
+      throw new AiGenerationError(
+        "anthropic_network_error",
+        "Não foi possível conectar ao serviço de IA da Anthropic. Tente novamente."
+      );
+    }
 
     const textBlock = response.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
@@ -115,6 +134,14 @@ export class AnthropicProvider implements AIProvider {
         }
         break;
       }
+    }
+
+    // A real API failure (bad key, no credits, rate limit, network) already
+    // carries its own specific, useful userMessage from complete() above -
+    // never overwrite it with the generic "unexpected format" message below,
+    // which only makes sense for actual JSON/validation failures.
+    if (lastError instanceof AiGenerationError) {
+      throw lastError;
     }
 
     const technicalDetail =
